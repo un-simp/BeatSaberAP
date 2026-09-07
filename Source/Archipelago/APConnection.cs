@@ -3,14 +3,10 @@ using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Helpers;
 using Archipelago.MultiClient.Net.Models;
-using Archipelago.MultiClient.Net.Packets;
 using BeatSaberAP;
 using HMUI;
-using IPA.Utilities;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -50,11 +46,12 @@ public static class APConnection {
             return false;
         }
         Plugin.Log.Info("Connected to Archipelago");
-        Dictionary<string, string> conninfo = new();
-        conninfo["host"] = host;
-        conninfo["port"] = port.ToString();
-        conninfo["slot"] = slot;
-        conninfo["password"] = password;
+        Dictionary<string, string> conninfo = new() {
+            ["host"] = host,
+            ["port"] = port.ToString(),
+            ["slot"] = slot,
+            ["password"] = password
+        };
         string json_conn = JsonConvert.SerializeObject(conninfo);
         System.IO.File.WriteAllText("AP_ConnInfo.json", json_conn);
         var success = (LoginSuccessful)result;
@@ -86,7 +83,7 @@ public static class APConnection {
         // Unlock starting songs for each category (node id could be different based on generation, so read from slot data)
         Plugin.Log.Info("Songs already in inventory: ");
         foreach (int i in StartingNodesList) {
-            Plugin.Log.Info("Inital Song unlocked: " + i.ToString());
+            Plugin.Log.Info("Inital Song unlocked: " + i);
             if (NodeToIdent.TryGetValue((uint)i, out var ident)) {
                 Plugin.Log.Info(ident);
                 SongUnlocks.Add(ident);
@@ -157,6 +154,7 @@ public static class APConnection {
     }
 
     public static async void CheckLocation(BeatmapKey key, string rank) {
+        Plugin.Log.Debug("checking location" + rank);
         // Use GenerateIdentAsync which properly handles the prefix stripping
         string ident = await GenerateIdentAsync(key);
 
@@ -192,10 +190,11 @@ public static class APConnection {
         long[] locationsToCheck = new long[6];
 
         if (GameMode == GameMode.PresetPass) {
-            session.Locations.CompleteLocationChecks(matchingEntry.Value);
+             await session.Locations.CompleteLocationChecksAsync(matchingEntry.Value);
+
         } else if (GameMode == GameMode.PresetAcc) {
             for (int i = 0; i <= gradeIndex; i++) locationsToCheck[i] = (matchingEntry.Value * 6 + i + 1);
-            session.Locations.CompleteLocationChecks(locationsToCheck);
+            await session.Locations.CompleteLocationChecksAsync(locationsToCheck);
         } else {
             // Generate location id for all 4 map categories based on how the apworld does it
             int nodeValue = (int)matchingEntry.Value;
@@ -213,7 +212,7 @@ public static class APConnection {
             }
 
             for (int i = 0; i <= gradeIndex; i++) locationsToCheck[i] = (baseId + (localIndex * 6) + i + 1);
-            session.Locations.CompleteLocationChecks(locationsToCheck);
+            await session.Locations.CompleteLocationChecksAsync(locationsToCheck);
 
         }
 
